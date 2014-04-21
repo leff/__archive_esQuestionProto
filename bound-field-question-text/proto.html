@@ -1,0 +1,82 @@
+<html>
+<head>
+
+    <script type="text/javascript" src="../vendor/jquery.js"></script>
+    <script type="text/javascript" src="../vendor/underscore.js"></script>
+    <script type="text/javascript" src="../vendor/backbone.js"></script>
+    <script type="text/javascript" src="../vendor/backbone.babysitter.js"></script>
+    <script type="text/javascript" src="../vendor/backbone.wreqr.js"></script>
+    <script type="text/javascript" src="../vendor/backbone.marionette.js"></script>
+
+
+    <script type="text/javascript" src="question.js"></script>
+</head>
+<body>
+
+    <script id="question_template" type="html/template">
+        <div class="question">
+            <div class="question_text"></div>
+            <div class="answers_container"></div>
+            <div class="help_text"></div>
+            <div class="error"></div>
+        </div>
+    </script>
+    <script id="question_text_template" type="html/template">
+        <h2>Qt: <%= question_text %></h2>
+    </script>
+    <script id="help_text_template" type="html/template">
+        <p>Ht: <%= help_text %></p>
+    </script>
+    <script id="error_template" type="html/template">
+        <div class="error">E: <%= message %></div>
+    </script>
+    <script id="mpq_template" type="html/template">
+        <div class="mpq">
+        </div>
+    </script>
+
+    <script id="mpqp" type="html/template">
+        <a href="#" class="doSomething">Do Something</a>
+        <a href="#" class="doSomethingElse">Do Something Else</a>
+    </script>
+
+    <script id="mpqp2" type="html/template">
+        <p>I got swapped in by my parent</p>
+    </script>
+
+    <div id="question_1"></div>
+    <script type="text/javascript">
+        var app = new Marionette.Application();
+        app.addRegions({
+            question_1: "#question_1"
+        });
+
+        app.addInitializer(function(options){
+            var qm = new QuestionDataModel({});
+            window.qm = qm; //debugging
+            var qv = new QuestionView({
+                model: qm,
+                question_definition: {
+                    question_text: 'how much is your goat?',
+                    help_text: 'for real though?',
+                    answers: [
+                        {
+                            name: '50',
+                            val: 50
+                        },
+                        {
+                            name: '100',
+                            val: 100
+                        }
+                    ]
+                }
+            });
+            qv.render();
+
+            app.question_1.show(qv);
+        });
+        app.start();
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,129 @@
+<html>
+<head>
+
+    <script type="text/javascript" src="../vendor/jquery.js"></script>
+    <script type="text/javascript" src="../vendor/underscore.js"></script>
+    <script type="text/javascript" src="../vendor/backbone.js"></script>
+    <script type="text/javascript" src="../vendor/backbone.babysitter.js"></script>
+    <script type="text/javascript" src="../vendor/backbone.wreqr.js"></script>
+    <script type="text/javascript" src="../vendor/backbone.marionette.js"></script>
+
+
+    <script type="text/javascript" src="question.js"></script>
+
+    <style>
+        .question-box {
+            float: left;
+        }
+        .expanded .reset {
+            display: none;
+        }
+        .collapsed {
+            width: 100px;
+            font-size: .3em;
+        }
+        .collapsed .reset {
+            display: block;
+        }
+        .answer {
+            display: inline-block;
+            width: 100px;
+            height: 130px;
+            border: 1px solid #CCC;
+        }
+        .collapsed .answer {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <script id="question_asker" type="html/template">
+        <div class="question-asker">
+            <div class="status"></div>
+            <div class="question-stack"></div>
+            <div class="error"></div>
+        </div>
+    </script>
+
+    <script id="question" type="html/template">
+        <div class="question">
+            <div class="question_text"><h2><%= question_text %></h2></div>
+            <div class="answers"></div>
+            <div class="help_text"><p style="font-size:75%;"><%= help_text %></p></div>
+            <div class="reset">Change ></div>
+        </div>
+    </script>
+
+    <script id="select_answers" type="html/template">
+        <div class="select-answers">
+            A list of answers
+            <span class="answer">click me</span>
+            <% _.each(answers, function(answer) { %>
+                <span class="answer" data-id="<%= answer.id %>"><%= answer.name %></span>
+            <% }); %>
+        </div>
+    </script>
+
+    <div id="question_1"></div>
+
+    <script type="text/javascript">
+        var app = new Marionette.Application();
+        app.addRegions({
+            question_1: "#question_1"
+        });
+
+        app.addInitializer(function(options){
+            var qm = new QuestionDataModel({});
+
+            var qv = new QuestionAsker({
+                model: qm,
+                question_definition: {
+                    question_text: 'how much is your goat?',
+                    help_text: 'for real though?',
+                    answer_type: 'SelectAnswers',
+                    answer_details:
+                        {
+                            answers: [
+                                {
+                                    id: 1,
+                                    name: '50',
+                                    val: 50
+                                },
+                                {
+                                    id: 2,
+                                    name: '100',
+                                    val: 100
+                                },
+                                {
+                                    id: 3,
+                                    name: 'next',
+                                    followup: {
+                                        question_text: "That's pretty expensive for 1 goat.",
+                                        help_text: "Is it expensive though?",
+                                        answer_type: 'SelectAnswers',
+                                        answer_details: {
+                                            answers: [
+                                                {
+                                                    id: 4,
+                                                    name: 'Yes',
+                                                    val: 'yes'
+                                                },
+                                                {
+                                                    id: 5,
+                                                    name: 'No',
+                                                    val: 'no'
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                }
+            });
+            app.question_1.show(qv);
+        });
+        app.start();
+    </script>
+</body>
+</html>
