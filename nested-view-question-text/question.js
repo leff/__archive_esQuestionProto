@@ -1,21 +1,50 @@
-var QuestionDataModel = Backbone.Model.extend({
+//Bone headed Dependency Injector.
+//Enough for Proof of Concept, but we'd probably want to find something more robust.
+//and less clunky to use.
+//and something it's easier to configure per test/test module.
+function DependencyInjector() {
+    this.deps = {};
+}
+DependencyInjector.prototype.register = function (name, classRef) {
+    this.deps[name] = classRef;
+}
+DependencyInjector.prototype.get = function(name) {
+    var deps = this.deps, depName = name;
+    var resolve_dependency = function resolve_dependency() {
+        return deps[depName];
+    }
+    //defer resolution until required
+    //necessary for collection views. they need to lookup the mock ItemViews, which are re-registered.
+    return resolve_dependency;
+}
+DependencyInjector.prototype.getNew = function(name, args) {
+    //happens right away, so closure magic of .get is not needed
+    return new this.deps[name](args);
+}
+var di = new DependencyInjector();
+
+
+
+
+di.register('QuestionDataModel', Backbone.Model.extend({
     defaults: {
         field: '',
         val: ''
     }
-});
+}));
 
-var QuestionMeta = Backbone.Model.extend({
+di.register('QuestionMeta', Backbone.Model.extend({
     defaults: {
         question_text: '',
         help_text: '',
-        answer_type: '', //Select, Slider, Etc
-        answer_details: {}
+        answer_type: '' //Select, Slider, Etc
     }
-});
-var QuestionMetaStack = Backbone.Collection.extend({
-    model: QuestionMeta
-});
+}));
+
+di.register('QuestionMetaStack', Backbone.Collection.extend({
+    model: di.get('QuestionMeta')
+}));
+
 
 
 //
@@ -28,7 +57,7 @@ var QuestionMetaStack = Backbone.Collection.extend({
 // In other words, Question encapsulates the common stuff about asking a question
 // without saying anything about how that question is answered
 //
-var Question = Marionette.Layout.extend({
+di.register('Question', Marionette.Layout.extend({
     template: '#question',
 
     ui: {
@@ -56,7 +85,7 @@ var Question = Marionette.Layout.extend({
     onRender: function() {
         var answer_type = this.model.get('answer_type');
 
-        var answers = new window[answer_type]({details: this.model.get('answer_details')});
+        var answers = di.getNew(answer_type, {details: this.model.get('answer_details')} );
         this.answers.show(answers);
     },
 
@@ -69,15 +98,16 @@ var Question = Marionette.Layout.extend({
     onDataInput: function(data) { this.trigger('dataWasInput', data); },
     onFollowupRequested: function(followup) { this.trigger('followupRequested', followup); },
     onResetClick: function() { this.trigger('resetRequested'); }
-});
-
+}));
 
 //
 // QuestionStack is a collection of Questions
 //
 //
-var QuestionStack = Marionette.CollectionView.extend({
-    itemView: Question,
+di.register('QuestionStack', Marionette.CollectionView.extend({
+    getItemView: function() {
+        return di.get('Question')();
+    },
 
     itemEvents: {
         dataWasInput: 'onDataInput',
@@ -94,7 +124,7 @@ var QuestionStack = Marionette.CollectionView.extend({
         this.children.each(function(q) {
             q.collapse_ui();
         });
-        this.collection.add( new QuestionMeta(followup) );
+        this.collection.add( di.getNew('QuestionMeta', followup) );
     },
 
     onResetRequested: function(event_name, child) {
@@ -104,7 +134,7 @@ var QuestionStack = Marionette.CollectionView.extend({
         this.children.last().expand_ui();
         this.trigger('resetRequested');
     }
-});
+}));
 
 
 //
@@ -118,7 +148,7 @@ var QuestionStack = Marionette.CollectionView.extend({
 // Therefore it is responsible for things that are 1 to 1 with
 // the data model, such as 'done-ness' and 'valid-ness'
 //
-var QuestionAsker = Marionette.Layout.extend({
+di.register('QuestionAsker', Marionette.Layout.extend({
     template: '#question_asker',
     regions: {
         quesiton_stack: '.question-stack',
@@ -140,9 +170,9 @@ var QuestionAsker = Marionette.Layout.extend({
     },
 
     onRender: function() {
-        this.question_meta_model = new QuestionMetaStack();
-        this.question_meta_model.add( new QuestionMeta(this.options.question_definition) );
-        this.quesiton_stack.show(new QuestionStack({collection: this.question_meta_model}));
+        this.question_meta_model = di.getNew('QuestionMetaStack');
+        this.question_meta_model.add( di.getNew('QuestionMeta', this.options.question_definition) );
+        this.quesiton_stack.show( di.getNew('QuestionStack', {collection: this.question_meta_model}) );
     },
 
     onDataInput: function(data) {
@@ -159,21 +189,20 @@ var QuestionAsker = Marionette.Layout.extend({
         var data = this.model.get('val');
         console.log('data is now', data);
     }
-
-});
-
+}));
 
 
 
-var SelectAnswersModel = Backbone.Model.extend({
+
+di.register('SelectAnswersModel', Backbone.Model.extend({
     defaults: {
         answers: []
     }
-});
+}));
 
 // SelectAnswers is a type of AnswerView
 // Ie, it can be slotted in to the Answers spot of a Question
-var SelectAnswers = Marionette.ItemView.extend({
+di.register('SelectAnswers',Marionette.ItemView.extend({
     template: '#select_answers',
 
     ui: {
@@ -182,12 +211,11 @@ var SelectAnswers = Marionette.ItemView.extend({
     },
 
     events: {
-        'click @ui.some_input': 'onSomeRandomInput',
         'click @ui.answer': 'onAnswerClick'
     },
 
     initialize: function() {
-        this.model = new SelectAnswersModel(this.options.details);
+        this.model = di.getNew('SelectAnswersModel', this.options.details);
 
         this.answers = this.options.details.answers;
     },
@@ -200,17 +228,13 @@ var SelectAnswers = Marionette.ItemView.extend({
 
     onAnswerClick: function(evt) {
         var selected_data_id = parseInt( $(evt.target).attr('data-id'), 10 );
-        console.log(evt, selected_data_id);
         var answer = _.findWhere(this.answers, {id: selected_data_id});
         if( answer.val ) {
             this.trigger( 'dataWasInput',  answer.val);
         } else if (answer.followup) {
             this.trigger( 'followupRequested', answer.followup );
         }
-    },
-
-    onSomeRandomInput: function() { this.trigger('dataWasInput', 'IamData'); }
-});
-
+    }
+}));
 
 

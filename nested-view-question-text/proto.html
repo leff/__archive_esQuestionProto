@@ -56,8 +56,6 @@
 
     <script id="select_answers" type="html/template">
         <div class="select-answers">
-            A list of answers
-            <span class="answer">click me</span>
             <% _.each(answers, function(answer) { %>
                 <span class="answer" data-id="<%= answer.id %>"><%= answer.name %></span>
             <% }); %>
@@ -73,9 +71,9 @@
         });
 
         app.addInitializer(function(options){
-            var qm = new QuestionDataModel({});
+            var qm = di.getNew('QuestionDataModel', {});
 
-            var qv = new QuestionAsker({
+            var qa = di.getNew('QuestionAsker', {
                 model: qm,
                 question_definition: {
                     question_text: 'how much is your goat?',
@@ -121,7 +119,7 @@
                         }
                 }
             });
-            app.question_1.show(qv);
+            app.question_1.show(qa);
         });
         app.start();
     </script>

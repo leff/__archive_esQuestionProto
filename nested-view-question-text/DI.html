@@ -1,0 +1,37 @@
+<script>
+function DependencyInjector() {
+    this.deps = {};
+}
+DependencyInjector.prototype.register = function (name, classRef) {
+    this.deps[name] = classRef;
+}
+DependencyInjector.prototype.get = function(name) {
+    var deps = this.deps, depName = name;
+    var resolve_dependency = function resolve_dependency() {
+        return deps[depName];
+    }
+    //defer resolution until required
+    //necessary for collection views. they need to lookup the mock ItemViews, which are re-registered.
+    return resolve_dependency;
+}
+DependencyInjector.prototype.getNew = function(name, args) {
+    //happens right away, so closure magic of .get is not needed
+    return new this.deps[name](args);
+}
+var di = new DependencyInjector();
+
+
+di.register('A', function(){ console.log("I'm Test A"); } );
+
+
+
+var a = di.get('A')();
+a();
+
+di.register('A', function(){ console.log("I'm Test B"); } );
+
+var b = di.get('A')();
+b();
+
+
+</script>

@@ -14,10 +14,29 @@
     <link rel="stylesheet" href="http://code.jquery.com/qunit/qunit-1.14.0.css" />
 </head>
 <body>
+    <!--
+        in the real world we'd inject these templates into every page that needed them,
+        including tests. It's only for the prototype that duplication is happening.
+    -->
+    <script id="question_asker" type="html/template">
+        <div class="question-asker">
+            <div class="status"></div>
+            <div class="question-stack"></div>
+            <div class="error"></div>
+        </div>
+    </script>
+
+    <script id="question" type="html/template">
+        <div class="question">
+            <div class="question_text"><h2><%= question_text %></h2></div>
+            <div class="answers"></div>
+            <div class="help_text"><p style="font-size:75%;"><%= help_text %></p></div>
+            <div class="reset">Change ></div>
+        </div>
+    </script>
+
     <script id="select_answers" type="html/template">
         <div class="select-answers">
-            A list of answers
-            <span class="answer">click me</span>
             <% _.each(answers, function(answer) { %>
                 <span class="answer" data-id="<%= answer.id %>"><%= answer.name %></span>
             <% }); %>
@@ -29,36 +48,133 @@
     <div id="qunit-fixture"></div>
 
     <script>
+        function createTestRegion() {
+            window.test_region = new Backbone.Marionette.Region({el: "#qunit-fixture"});
+        }
+        function destroyTestRegion() {
+            window.test_region.reset(); // make sure we clean up refs to view
+                delete window.test_region;
+        }
+
+        module("answer types tests", {
+            setup: function() {
+                createTestRegion();
+            },
+            teardown: function() {
+                destroyTestRegion();
+            }
+        });
+
         test( "SelectAnswers question view test", function() {
             expect(4);
             var mock_deets = {
                 details: {
                         answers: [
-                            {
-                                id: 1,
-                                name: 'Test 1',
-                                val: '1'
-                            },
-                            {
-                                id: 2,
-                                name: 'Test 2',
-                                val: '2'
-                            }
+                            { id: 1, name: 'Test 1', val: '1' },
+                            { id: 2, name: 'Test 2', val: '2' }
                         ]
                     }
                 };
 
-            var mgr = new Backbone.Marionette.Region({el: "#qunit-fixture"});
-            var sa = new SelectAnswers(mock_deets);
-            mgr.show(sa);
+
+            var sa = di.getNew('SelectAnswers', mock_deets);
+            test_region.show(sa);
             equal(sa.model.get('answers').length, 2, "Model's answers is correct length");
-            deepEqual(sa.serializeData(), mock_deets.details, "SerializeData produces correct output");
+            deepEqual(sa.serializeData(), {
+                        answers: [
+                            { id: 1, name: 'Test 1', val: '1' },
+                            { id: 2, name: 'Test 2', val: '2' }
+                        ]
+                    }, "SerializeData produces correct output");
 
             sa.on('dataWasInput', function(data) {
                 ok( true, "Click triggered action");
                 equal(data, '1', "Click event returned correct data");
             });
-            $('.answer')[1].click();
+            $('.answer').first().click();
+        });
+
+
+        module("question asker tests", {
+            setup: function() {
+                createTestRegion();
+            },
+            teardown: function() {
+                destroyTestRegion();
+                delete window.MockQuestionType;
+            }
+        });
+
+        test( "QuestionAsker child API test", function() {
+            expect(1);
+            di.register('MockQuestionType', Marionette.ItemView.extend({
+                template: function() {
+                    return '<span class="fire-dataWasInput">dwi</span>'
+                            +'<span class="fire-resetRequested">rr</span>'
+                            +'<span class="fire-followupRequested">fr</span>';
+                },
+                events: {
+                    'click .fire-dataWasInput': 'onDataWasInput',
+                    'click .fire-followupRequested': 'onFollowupRequested'
+                },
+                onDataWasInput: function() { this.trigger( 'dataWasInput',  'test_value'); },
+                onResetRequested: function() { this.trigger( 'resetRequested'); },
+                onFollowupRequested: function() {
+                    this.trigger( 'followupRequested', {
+                        question_text: 'Test Question 2?',
+                        help_text: 'Also helpful',
+                        answer_type: 'MockQuestionType'
+                    });
+                }
+            }));
+            var qm = di.getNew('QuestionDataModel', {});
+            var qa = di.getNew('QuestionAsker', {
+                model: qm,
+                question_definition: {
+                        question_text: 'Test Question?',
+                        help_text: 'I am helpful',
+                        answer_type: 'MockQuestionType'
+                    }
+                });
+            test_region.show(qa);
+            qm.on('change', function() {
+                equal(qm.get('val'), 'test_value', "QuestionAsker collected data from dataWasInput properly");
+            });
+            $('.fire-dataWasInput').click();
+
+        });
+
+        test( "QuestionAsker child API test", function() {
+            expect(2);
+
+            //Mock QuestionStack
+            di.register('QuestionStack', Marionette.ItemView.extend({
+                template: function() {
+                    return '<span class="fire-resetRequested">rr</span>';
+                },
+                events: {
+                    'click .fire-resetRequested': 'onResetRequested'
+                },
+                onResetRequested: function() { this.trigger( 'resetRequested'); },
+            }));
+
+            var qm = di.getNew('QuestionDataModel', {val: 'test_value'});
+            var qa = di.getNew('QuestionAsker', {
+                model: qm,
+                question_definition: {
+                        question_text: 'Test Question?',
+                        help_text: 'I am helpful',
+                        answer_type: 'MockQuestionType'
+                    }
+                });
+            test_region.show(qa);
+
+
+            ok(qm.get('val'), "Val is set to something");
+            qm.on('change', function() {
+                equal(qm.get('val'), undefined, "QuestionAsker reset data properly");
+            });
+            $('.fire-resetRequested').first().click();
 
         });
     </script>
