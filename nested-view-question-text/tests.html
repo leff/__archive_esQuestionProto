@@ -56,7 +56,7 @@
                 delete window.test_region;
         }
 
-        module("answer types tests", {
+        module("Specific AnswerView tests", {
             setup: function() {
                 createTestRegion();
             },
@@ -95,7 +95,7 @@
         });
 
 
-        module("question asker tests", {
+        module("QuestionAsker tests", {
             setup: function() {
                 createTestRegion();
             },
@@ -106,59 +106,22 @@
         });
 
         test( "QuestionAsker child API test", function() {
-            expect(1);
-            di.register('MockQuestionType', Marionette.ItemView.extend({
-                template: function() {
-                    return '<span class="fire-dataWasInput">dwi</span>'
-                            +'<span class="fire-resetRequested">rr</span>'
-                            +'<span class="fire-followupRequested">fr</span>';
-                },
-                events: {
-                    'click .fire-dataWasInput': 'onDataWasInput',
-                    'click .fire-followupRequested': 'onFollowupRequested'
-                },
-                onDataWasInput: function() { this.trigger( 'dataWasInput',  'test_value'); },
-                onResetRequested: function() { this.trigger( 'resetRequested'); },
-                onFollowupRequested: function() {
-                    this.trigger( 'followupRequested', {
-                        question_text: 'Test Question 2?',
-                        help_text: 'Also helpful',
-                        answer_type: 'MockQuestionType'
-                    });
-                }
-            }));
-            var qm = di.getNew('QuestionDataModel', {});
-            var qa = di.getNew('QuestionAsker', {
-                model: qm,
-                question_definition: {
-                        question_text: 'Test Question?',
-                        help_text: 'I am helpful',
-                        answer_type: 'MockQuestionType'
-                    }
-                });
-            test_region.show(qa);
-            qm.on('change', function() {
-                equal(qm.get('val'), 'test_value', "QuestionAsker collected data from dataWasInput properly");
-            });
-            $('.fire-dataWasInput').click();
-
-        });
-
-        test( "QuestionAsker child API test", function() {
             expect(2);
 
             //Mock QuestionStack
             di.register('QuestionStack', Marionette.ItemView.extend({
                 template: function() {
-                    return '<span class="fire-resetRequested">rr</span>';
+                    return '<span class="fire-dataWasInput">dwi</span> <span class="fire-resetRequested">rr</span>';
                 },
                 events: {
+                    'click .fire-dataWasInput': 'onDataWasInput',
                     'click .fire-resetRequested': 'onResetRequested'
                 },
+                onDataWasInput: function() { this.trigger( 'dataWasInput',  'test_value'); },
                 onResetRequested: function() { this.trigger( 'resetRequested'); },
             }));
 
-            var qm = di.getNew('QuestionDataModel', {val: 'test_value'});
+            var qm = di.getNew('QuestionDataModel');
             var qa = di.getNew('QuestionAsker', {
                 model: qm,
                 question_definition: {
@@ -169,10 +132,16 @@
                 });
             test_region.show(qa);
 
+            qm.on('change', function() {
+                console.log(qm.get('val'));
+                equal(qm.get('val'), 'test_value', "QuestionAsker collected data from dataWasInput properly");
+                qm.off('change'); // to avoid conflicting with next assert
+            });
+            $('.fire-dataWasInput').first().click();
 
-            ok(qm.get('val'), "Val is set to something");
             qm.on('change', function() {
                 equal(qm.get('val'), undefined, "QuestionAsker reset data properly");
+                qm.off('change');
             });
             $('.fire-resetRequested').first().click();
 
