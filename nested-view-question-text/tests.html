@@ -1,0 +1,66 @@
+<html>
+<head>
+    <script type="text/javascript" src="../vendor/jquery.js"></script>
+    <script type="text/javascript" src="../vendor/underscore.js"></script>
+    <script type="text/javascript" src="../vendor/backbone.js"></script>
+    <script type="text/javascript" src="../vendor/backbone.babysitter.js"></script>
+    <script type="text/javascript" src="../vendor/backbone.wreqr.js"></script>
+    <script type="text/javascript" src="../vendor/backbone.marionette.js"></script>
+
+
+    <script type="text/javascript" src="question.js"></script>
+
+    <script src="http://code.jquery.com/qunit/qunit-1.14.0.js"></script>
+    <link rel="stylesheet" href="http://code.jquery.com/qunit/qunit-1.14.0.css" />
+</head>
+<body>
+    <script id="select_answers" type="html/template">
+        <div class="select-answers">
+            A list of answers
+            <span class="answer">click me</span>
+            <% _.each(answers, function(answer) { %>
+                <span class="answer" data-id="<%= answer.id %>"><%= answer.name %></span>
+            <% }); %>
+        </div>
+    </script>
+
+
+    <div id="qunit"></div>
+    <div id="qunit-fixture"></div>
+
+    <script>
+        test( "SelectAnswers question view test", function() {
+            expect(4);
+            var mock_deets = {
+                details: {
+                        answers: [
+                            {
+                                id: 1,
+                                name: 'Test 1',
+                                val: '1'
+                            },
+                            {
+                                id: 2,
+                                name: 'Test 2',
+                                val: '2'
+                            }
+                        ]
+                    }
+                };
+
+            var mgr = new Backbone.Marionette.Region({el: "#qunit-fixture"});
+            var sa = new SelectAnswers(mock_deets);
+            mgr.show(sa);
+            equal(sa.model.get('answers').length, 2, "Model's answers is correct length");
+            deepEqual(sa.serializeData(), mock_deets.details, "SerializeData produces correct output");
+
+            sa.on('dataWasInput', function(data) {
+                ok( true, "Click triggered action");
+                equal(data, '1', "Click event returned correct data");
+            });
+            $('.answer')[1].click();
+
+        });
+    </script>
+</body>
+</html>

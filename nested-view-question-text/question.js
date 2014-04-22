@@ -111,8 +111,9 @@ var QuestionStack = Marionette.CollectionView.extend({
 // QuestionAsker is the interface between the
 // page/form and the complicated way we ask questions in the UI
 //
-// It maps from the one bit of data we're looking for to the
-// many levels of UI we may use to collect it.
+// It handles the many to many mapping between
+// data we are collecting, and
+// the questions we ask to find the data
 //
 // Therefore it is responsible for things that are 1 to 1 with
 // the data model, such as 'done-ness' and 'valid-ness'
@@ -162,6 +163,14 @@ var QuestionAsker = Marionette.Layout.extend({
 });
 
 
+
+
+var SelectAnswersModel = Backbone.Model.extend({
+    defaults: {
+        answers: []
+    }
+});
+
 // SelectAnswers is a type of AnswerView
 // Ie, it can be slotted in to the Answers spot of a Question
 var SelectAnswers = Marionette.ItemView.extend({
@@ -178,6 +187,8 @@ var SelectAnswers = Marionette.ItemView.extend({
     },
 
     initialize: function() {
+        this.model = new SelectAnswersModel(this.options.details);
+
         this.answers = this.options.details.answers;
     },
 
@@ -189,6 +200,7 @@ var SelectAnswers = Marionette.ItemView.extend({
 
     onAnswerClick: function(evt) {
         var selected_data_id = parseInt( $(evt.target).attr('data-id'), 10 );
+        console.log(evt, selected_data_id);
         var answer = _.findWhere(this.answers, {id: selected_data_id});
         if( answer.val ) {
             this.trigger( 'dataWasInput',  answer.val);
