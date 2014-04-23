@@ -59,9 +59,11 @@
         module("Specific AnswerView tests", {
             setup: function() {
                 createTestRegion();
+                di = default_di.clone();
             },
             teardown: function() {
                 destroyTestRegion();
+                delete window.di;
             }
         });
 
@@ -98,10 +100,12 @@
         module("QuestionAsker tests", {
             setup: function() {
                 createTestRegion();
+                di = default_di.clone();
             },
             teardown: function() {
                 destroyTestRegion();
                 delete window.MockQuestionType;
+                delete window.di;
             }
         });
 
@@ -109,7 +113,7 @@
             expect(2);
 
             //Mock QuestionStack
-            di.register('QuestionStack', Marionette.ItemView.extend({
+            var MockQuestionStack = Marionette.ItemView.extend({
                 template: function() {
                     return '<span class="fire-dataWasInput">dwi</span> <span class="fire-resetRequested">rr</span>';
                 },
@@ -119,7 +123,9 @@
                 },
                 onDataWasInput: function() { this.trigger( 'dataWasInput',  'test_value'); },
                 onResetRequested: function() { this.trigger( 'resetRequested'); },
-            }));
+            });
+            di.register('QuestionStack', MockQuestionStack);
+
 
             var qm = di.getNew('QuestionDataModel');
             var qa = di.getNew('QuestionAsker', {
@@ -133,7 +139,6 @@
             test_region.show(qa);
 
             qm.on('change', function() {
-                console.log(qm.get('val'));
                 equal(qm.get('val'), 'test_value', "QuestionAsker collected data from dataWasInput properly");
                 qm.off('change'); // to avoid conflicting with next assert
             });

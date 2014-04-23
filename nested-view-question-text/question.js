@@ -1,49 +1,47 @@
 //Bone headed Dependency Injector.
-//Enough for Proof of Concept, but we'd probably want to find something more robust.
-//and less clunky to use.
-//and something it's easier to configure per test/test module.
-function DependencyInjector() {
+//Enough for Proof of Concept, but we might want to find something more robust.
+//
+// "App" must set a global di var.
+// In actual code, it would be di = default_di (defined below)
+// Tests can copy default_di and mess with it
+function DependencyInjector(config) {
     this.deps = {};
+    if(config) {
+        _.extend(this.deps, config);
+    }
 }
 DependencyInjector.prototype.register = function (name, classRef) {
     this.deps[name] = classRef;
 }
-DependencyInjector.prototype.get = function(name) {
-    var deps = this.deps, depName = name;
-    var resolve_dependency = function resolve_dependency() {
-        return deps[depName];
-    }
-    //defer resolution until required
-    //necessary for collection views. they need to lookup the mock ItemViews, which are re-registered.
-    return resolve_dependency;
-}
 DependencyInjector.prototype.getNew = function(name, args) {
-    //happens right away, so closure magic of .get is not needed
     return new this.deps[name](args);
 }
-var di = new DependencyInjector();
+DependencyInjector.prototype.clone = function() {
+    return new DependencyInjector(this.deps);
+}
 
 
 
 
-di.register('QuestionDataModel', Backbone.Model.extend({
+
+var QuestionDataModel = Backbone.Model.extend({
     defaults: {
         field: '',
         val: ''
     }
-}));
+});
 
-di.register('QuestionMeta', Backbone.Model.extend({
+var QuestionMeta = Backbone.Model.extend({
     defaults: {
         question_text: '',
         help_text: '',
         answer_type: '' //Select, Slider, Etc
     }
-}));
+});
 
-di.register('QuestionMetaStack', Backbone.Collection.extend({
-    model: di.get('QuestionMeta')
-}));
+var QuestionMetaStack = Backbone.Collection.extend({
+    model: QuestionMeta
+});
 
 
 
@@ -57,7 +55,7 @@ di.register('QuestionMetaStack', Backbone.Collection.extend({
 // In other words, Question encapsulates the common stuff about asking a question
 // without saying anything about how that question is answered
 //
-di.register('Question', Marionette.Layout.extend({
+var Question = Marionette.Layout.extend({
     template: '#question',
 
     ui: {
@@ -98,16 +96,14 @@ di.register('Question', Marionette.Layout.extend({
     onDataInput: function(data) { this.trigger('dataWasInput', data); },
     onFollowupRequested: function(followup) { this.trigger('followupRequested', followup); },
     onResetClick: function() { this.trigger('resetRequested'); }
-}));
+});
 
 //
 // QuestionStack is a collection of Questions
 //
 //
-di.register('QuestionStack', Marionette.CollectionView.extend({
-    getItemView: function() {
-        return di.get('Question')();
-    },
+var QuestionStack = Marionette.CollectionView.extend({
+    itemView:  Question,
 
     itemEvents: {
         dataWasInput: 'onDataInput',
@@ -134,7 +130,7 @@ di.register('QuestionStack', Marionette.CollectionView.extend({
         this.children.last().expand_ui();
         this.trigger('resetRequested');
     }
-}));
+});
 
 
 //
@@ -148,7 +144,7 @@ di.register('QuestionStack', Marionette.CollectionView.extend({
 // Therefore it is responsible for things that are 1 to 1 with
 // the data model, such as 'done-ness' and 'valid-ness'
 //
-di.register('QuestionAsker', Marionette.Layout.extend({
+var QuestionAsker = Marionette.Layout.extend({
     template: '#question_asker',
     regions: {
         quesiton_stack: '.question-stack',
@@ -189,20 +185,20 @@ di.register('QuestionAsker', Marionette.Layout.extend({
         var data = this.model.get('val');
         console.log('data is now', data);
     }
-}));
+});
 
 
 
 
-di.register('SelectAnswersModel', Backbone.Model.extend({
+var SelectAnswersModel = Backbone.Model.extend({
     defaults: {
         answers: []
     }
-}));
+});
 
 // SelectAnswers is a type of AnswerView
 // Ie, it can be slotted in to the Answers spot of a Question
-di.register('SelectAnswers',Marionette.ItemView.extend({
+var SelectAnswers = Marionette.ItemView.extend({
     template: '#select_answers',
 
     ui: {
@@ -235,6 +231,19 @@ di.register('SelectAnswers',Marionette.ItemView.extend({
             this.trigger( 'followupRequested', answer.followup );
         }
     }
-}));
+});
 
 
+
+
+
+var default_di = new DependencyInjector({
+    'QuestionDataModel': QuestionDataModel,
+    'QuestionMeta': QuestionMeta,
+    'QuestionMetaStack': QuestionMetaStack,
+    'Question': Question,
+    'QuestionStack': QuestionStack,
+    'QuestionAsker': QuestionAsker,
+    'SelectAnswersModel': SelectAnswersModel,
+    'SelectAnswers': SelectAnswers
+});
