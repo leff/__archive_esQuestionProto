@@ -8,3 +8,7 @@ To make it work, we treat each box on the survey as a line of inquiry (called in
 Underlying the this concept is the fact that boxes on the page that we now call questions are actually many to many maps between data collected on the one hand, and questions we pose to get there on the other. The QuestionAsker is the interface between the two.
 
 
+Layers
+------
+
+![Layers](docs/layers.png)
