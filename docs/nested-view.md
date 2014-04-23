@@ -11,4 +11,4 @@ Underlying the this concept is the fact that boxes on the page that we now call 
 Layers
 ------
 
-![Layers](docs/layers.png)
+![Layers](layers.png)
